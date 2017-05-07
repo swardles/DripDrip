@@ -12,7 +12,7 @@
 // });
 
 function setup() {
-	socket = io.connect('http://10.209.2.183:3000');
+	socket = io.connect('http://10.209.25.128:3000');
 
 	socket.on('connect', function(data) {
 		socket.emit('drip:phone', 'Hi I\'m a phone');
