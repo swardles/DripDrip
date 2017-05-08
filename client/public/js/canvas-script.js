@@ -14,9 +14,20 @@ var squareArray = [];
 var prev = 0;
 
 
+var paths = [];
+var painting = false;
+var next = 0;
+var current;
+var previous;
+
+
 function setup() {
 
 	createCanvas(windowWidth, windowHeight);
+	current = createVector(0,0);
+  	previous = createVector(0,0);
+
+
 
 	center = createVector(width/2, height/2);
 	for (var i = 0; i <num; i++){
@@ -51,7 +62,7 @@ function setup() {
 	});
 }
 
-function draw() {
+// function draw() {
   // background(255)
   // if (pressed) {
   // 	fill(255, 0, 0);
@@ -78,51 +89,116 @@ function draw() {
 
 
 //SQUARES
-	var rectWidth = 50;
-	var rectHeight = 25;
-	// prev = squareArray[0].pos;
-	push();
-		translate(-rectWidth / 2, -rectHeight / 2);
-
-		for (var i =0; i< squareArray.length; i++) {
-			var square = squareArray[i];
-			var distance = 0;
-			if (i != 0) {
-				// distance = squareArray[i].pos.dist(squareArray[i-1]);
-				distance = p5.Vector.dist(squareArray[i].pos, squareArray[i-1].pos);
-			}
-			var scale = map(distance, 0, 100, 0.5, 10)
-			// if (i > squareArray.length - 2) {
-			// 	console.log(distance);
-			// }
+// 	
 
 
-			rect(square.pos.x , square.pos.y , rectWidth * scale, rectHeight * scale);
-		}
-	pop();
+//CIRCLES
+
+function draw() {
+  background(200);
+  
+  // If it's time for a new point
+  if (millis() > next && painting) {
+
+    // Grab mouse position      
+    current.x = mouseX;
+    current.y = mouseY;
+
+    // New particle's force is based on mouse movement
+    var force = p5.Vector.sub(current, previous);
+    force.mult(0.05);
+
+    // Add new particle
+    paths[paths.length - 1].add(current, force);
+    
+    // Schedule next circle
+    next = millis() + random(100);
+
+    // Store mouse values
+    previous.x = current.x;
+    previous.y = current.y;
+  }
+
+  // Draw all paths
+  for( var i = 0; i < paths.length; i++) {
+    paths[i].update();
+    paths[i].display();
+  }
 }
 
-
-function mousePressed(){
-
+// Start it up
+function mousePressed() {
+  next = 0;
+  painting = true;
+  previous.x = mouseX;
+  previous.y = mouseY;
+  paths.push(new Path());
 }
 
-function mouseReleased(){
-	squareArray = [];
+// Stop
+function mouseReleased() {
+  painting = false;
 }
 
-function mouseDragged(){
-	console.log('hi');
-	var pos = createVector(mouseX, mouseY)
-	var obj = {
-		pos:pos, 
-	}
-	squareArray.push(obj)
+// A Path is a list of particles
+function Path() {
+  this.particles = [];
+  this.hue = random(100);
 }
 
+Path.prototype.add = function(position, force) {
+  // Add a new particle with a position, force, and hue
+  this.particles.push(new Particle(position, force, this.hue));
+}
 
+// Display plath
+Path.prototype.update = function() {  
+  for (var i = 0; i < this.particles.length; i++) {
+    this.particles[i].update();
+  }
+}  
 
+// Display plath
+Path.prototype.display = function() {
+  
+  // Loop through backwards
+  for (var i = this.particles.length - 1; i >= 0; i--) {
+    // If we shold remove it
+    if (this.particles[i].lifespan <= 0) {
+      this.particles.splice(i, 1);
+    // Otherwise, display it
+    } else {
+      this.particles[i].display(this.particles[i+1]);
+    }
+  }
 
-function windowResized(){
- resizeCanvas(windowWidth, windowHeight)
+}  
+
+// Particles along the path
+function Particle(position, force, hue) {
+  this.position = createVector(position.x, position.y);
+  this.velocity = createVector(force.x, force.y);
+  this.drag = 0.95;
+  this.lifespan = 255;
+}
+
+Particle.prototype.update = function() {
+  // Move it
+  this.position.add(this.velocity);
+  // Slow it down
+  this.velocity.mult(this.drag);
+  // Fade it out
+  this.lifespan--;
+}
+
+// Draw particle and connect it with a line
+// Draw a line to another
+Particle.prototype.display = function(other) {
+  stroke(0, this.lifespan);
+  fill(0, this.lifespan/2);    
+  ellipse(this.position.x,this.position.y, 8, 8);    
+  // If we need to draw a line
+  if (other) {
+    line(this.position.x, this.position.y, other.position.x, other.position.y);
+  }
 }
